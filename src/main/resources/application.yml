@@ -2,29 +2,29 @@ spring:
   application:
     name: agrocore-backend
 
-  # Configuración de la Base de Datos
+  # Base de Datos
   datasource:
     url: jdbc:postgresql://127.0.0.1:15432/agrocore_db?sslmode=disable
     username: agrocore_user
     password: agrocore_password
     driver-class-name: org.postgresql.Driver
 
-  # Configuración de JPA / Hibernate
+  # JPA / Hibernate
   jpa:
     hibernate:
-      ddl-auto: validate # Dejamos que Flyway controle la estructura, no Hibernate
+      ddl-auto: validate # Flyway
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # Configuración de Flyway (Control de versiones de BD)
+  # Flyway (Control de versiones de BD)
   flyway:
     enabled: true
     baseline-on-migrate: true
 
-  # Configuración de Kafka
+  # Kafka
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
