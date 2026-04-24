@@ -34,6 +34,22 @@ services:
       - kafka_data:/tmp/kafka-logs
     restart: unless-stopped
 
+  # 3. Backend Spring Boot (NUEVO)
+  backend:
+    build: .
+    container_name: agrocore-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - kafka
+    environment:
+      # Sobrescribimos la URL para que apunte al contenedor de postgres, no a localhost
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/agrocore_db
+      - SPRING_DATASOURCE_USERNAME=agrocore_user
+      - SPRING_DATASOURCE_PASSWORD=agrocore_password
+    restart: unless-stopped
+
 # Volúmenes
 volumes:
   postgres_data_v2:
