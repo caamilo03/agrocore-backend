@@ -9,10 +9,10 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // Aplica a todos los endpoints (rutas) de tu API
-                .allowedOrigins("https://agrocore-frontend.pages.dev/") // IMPORTANTE: Reemplaza esto con la URL exacta de tu frontend
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Métodos HTTP permitidos
-                .allowedHeaders("*") // Permite cualquier cabecera
-                .allowCredentials(true); // Necesario si en el futuro manejas cookies o tokens de autenticación
+        registry.addMapping("/**")
+                .allowedOrigins("https://agrocore-frontend.pages.dev") // URL exacta, sin asteriscos y sin barra / al final
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true);
     }
 }
