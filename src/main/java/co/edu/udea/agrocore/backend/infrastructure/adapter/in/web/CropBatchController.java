@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/batches")
-@CrossOrigin(origins = "*")
+//@CrossOrigin(origins = "*")
 public class CropBatchController {
 
     private final CreateCropBatchUseCase createCropBatchUseCase;

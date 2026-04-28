@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/suppliers")
-@CrossOrigin(origins = "*") // Ajusta según tus políticas de CORS
+//@CrossOrigin(origins = "*") // Ajusta según tus políticas de CORS
 public class SupplierController {
 
     private final CreateSupplierUseCase createSupplierUseCase;
