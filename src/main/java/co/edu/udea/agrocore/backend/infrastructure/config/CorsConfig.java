@@ -10,7 +10,7 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("https://agrocore-frontend.pages.dev") // URL exacta, sin asteriscos y sin barra / al final
+                .allowedOriginPatterns("https://agrocore-frontend.pages.dev") // <-- Usar Patterns en lugar de Origins
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
