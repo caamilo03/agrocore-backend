@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/substrates")
-@CrossOrigin(origins = "*") // Ajusta esto según tus políticas de CORS
+//@CrossOrigin(origins = "*") // Ajusta esto según tus políticas de CORS
 public class SubstrateController {
 
     private final CreateSubstrateUseCase createSubstrateUseCase;

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/species")
-@CrossOrigin(origins = "*")
+//@CrossOrigin(origins = "*")
 public class SpeciesController {
 
     private final CreateSpeciesUseCase createSpeciesUseCase;
