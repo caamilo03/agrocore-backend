@@ -1,5 +1,4 @@
 services:
-  # 1. Base de datos PostgreSQL
   postgres:
     image: postgres:16-alpine
     container_name: agrocore-postgres
@@ -12,39 +11,63 @@ services:
     volumes:
       - postgres_data_v2:/var/lib/postgresql/data
     restart: unless-stopped
+    mem_limit: 384m
+    mem_reservation: 192m
 
-  # 2. Apache Kafka (imagen Confluent - estandar de la industria)
-  # Dos listeners:
-  #   - EXTERNAL (localhost:9092) para clientes en el host (desarrollo local).
-  #   - INTERNAL (kafka:29092) para clientes dentro de la red Docker (contenedor backend).
+  # Kafka KRaft single-node, perfil "low-memory"
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: agrocore-kafka
     ports:
       - "9092:9092"
     environment:
-      # Cluster ID (base64, 22 chars) - obligatorio para KRaft en Confluent
-      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
       # KRaft (sin Zookeeper)
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
       # Listeners
       KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      # Single-node config
+
+      # Single-node
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      # ---- OPTIMIZACIÓN DE MEMORIA ----
+      # Heap JVM (lo más impactante: por defecto pide ~1GB)
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx320m"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M -XX:+ExplicitGCInvokesConcurrent"
+
+      # Threads (single-node, tráfico bajo)
+      KAFKA_NUM_NETWORK_THREADS: 2
+      KAFKA_NUM_IO_THREADS: 2
+      KAFKA_BACKGROUND_THREADS: 4
+      KAFKA_NUM_REPLICA_FETCHERS: 1
+
+      # Retención corta — la BD ya guarda el histórico
+      KAFKA_LOG_RETENTION_HOURS: 6
+      KAFKA_LOG_SEGMENT_BYTES: 16777216           # 16 MB
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 60000
+      KAFKA_LOG_CLEANER_DEDUPE_BUFFER_SIZE: 10485760   # 10 MB
+      KAFKA_LOG_CLEANER_THREADS: 1
+
+      # Apagar JMX y auto-create
+      KAFKA_JMX_PORT: ""
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     volumes:
       - kafka_data:/var/lib/kafka/data
     restart: unless-stopped
+    # Límite duro: si Kafka se desboca, Docker lo mata en vez de tumbar el VPS
+    mem_limit: 420m
+    mem_reservation: 280m
 
-  # 3. Backend Spring Boot (NUEVO)
   backend:
     build: .
     container_name: agrocore-backend
@@ -54,15 +77,16 @@ services:
       - postgres
       - kafka
     environment:
-      # Sobrescribimos la URL para que apunte al contenedor de postgres, no a localhost
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/agrocore_db
       - SPRING_DATASOURCE_USERNAME=agrocore_user
       - SPRING_DATASOURCE_PASSWORD=agrocore_password
-      # Kafka: el backend se conecta por la red interna de Docker
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      # Limitar también el heap del backend
+      - JAVA_TOOL_OPTIONS=-Xms192m -Xmx384m -XX:+UseG1GC -XX:MaxRAMPercentage=75
     restart: unless-stopped
+    mem_limit: 512m
+    mem_reservation: 320m
 
-# Volúmenes
 volumes:
   postgres_data_v2:
   kafka_data:

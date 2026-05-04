@@ -46,7 +46,7 @@ agrocore:
     topics:
       telemetry: agrocore.telemetry.readings.v1
       telemetry-dlq: agrocore.telemetry.readings.v1.dlq
-    partitions: 3
+    partitions: 1
     replication-factor: 1
   simulator:
     enabled: ${AGROCORE_SIMULATOR_ENABLED:true}
