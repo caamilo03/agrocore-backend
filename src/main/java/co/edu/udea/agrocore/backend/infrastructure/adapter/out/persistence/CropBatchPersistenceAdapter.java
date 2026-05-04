@@ -33,6 +33,13 @@ public class CropBatchPersistenceAdapter implements CropBatchRepositoryPort {
     }
 
     @Override
+    public List<CropBatch> findByStatus(String status) {
+        return jpaRepository.findByStatus(status).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public boolean existsById(UUID id) {
         return jpaRepository.existsById(id);
     }

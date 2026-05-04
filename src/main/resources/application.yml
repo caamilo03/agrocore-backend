@@ -25,24 +25,20 @@ spring:
     baseline-on-migrate: true
 
   # Kafka
+  # Payloads viajan como String (JSON serializado/parseado por la app via ObjectMapper).
+  # Esto evita problemas de tipos de fecha (LocalDateTime) con el JsonSerializer
+  # de Spring Kafka, que se instancia con un ObjectMapper sin JavaTimeModule.
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.add.type.headers: false
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: agrocore-telemetry-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-        spring.json.trusted.packages: "co.edu.udea.agrocore.backend.*"
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: co.edu.udea.agrocore.backend.infrastructure.adapter.in.messaging.dto.TelemetryEvent
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 # Configuracion AgroCore
 agrocore:
@@ -52,3 +48,7 @@ agrocore:
       telemetry-dlq: agrocore.telemetry.readings.v1.dlq
     partitions: 3
     replication-factor: 1
+  simulator:
+    enabled: ${AGROCORE_SIMULATOR_ENABLED:true}
+    interval-ms: ${AGROCORE_SIMULATOR_INTERVAL_MS:5000}
+    variance-percent: 5
