@@ -25,8 +25,30 @@ spring:
     baseline-on-migrate: true
 
   # Kafka
+  # Payloads viajan como String (JSON serializado/parseado por la app via ObjectMapper).
+  # Esto evita problemas de tipos de fecha (LocalDateTime) con el JsonSerializer
+  # de Spring Kafka, que se instancia con un ObjectMapper sin JavaTimeModule.
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: agrocore-telemetry-group
       auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+# Configuracion AgroCore
+agrocore:
+  kafka:
+    topics:
+      telemetry: agrocore.telemetry.readings.v1
+      telemetry-dlq: agrocore.telemetry.readings.v1.dlq
+    partitions: 3
+    replication-factor: 1
+  simulator:
+    enabled: ${AGROCORE_SIMULATOR_ENABLED:true}
+    interval-ms: ${AGROCORE_SIMULATOR_INTERVAL_MS:5000}
+    variance-percent: 5

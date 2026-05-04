@@ -7,6 +7,7 @@ import java.util.UUID;
 public interface CropBatchRepositoryPort {
     CropBatch save(CropBatch cropBatch);
     List<CropBatch> findAll();
+    List<CropBatch> findByStatus(String status);
     boolean existsById(UUID id);
     void deleteById(UUID id);
 }
