@@ -42,6 +42,7 @@ spring:
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
         spring.json.trusted.packages: "co.edu.udea.agrocore.backend.*"
         spring.json.use.type.headers: false
+        spring.json.value.default.type: co.edu.udea.agrocore.backend.infrastructure.adapter.in.messaging.dto.TelemetryEvent
 
 # Configuracion AgroCore
 agrocore:
