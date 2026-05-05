@@ -46,5 +46,5 @@ agrocore:
       poll-timeout-ms: 1000
   simulator:
     enabled: ${AGROCORE_SIMULATOR_ENABLED:true}
-    interval-ms: ${AGROCORE_SIMULATOR_INTERVAL_MS:5000}
+    interval-ms: ${AGROCORE_SIMULATOR_INTERVAL_MS:30000}
     variance-percent: 5
