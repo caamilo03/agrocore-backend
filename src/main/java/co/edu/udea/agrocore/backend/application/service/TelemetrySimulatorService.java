@@ -46,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TelemetrySimulatorService {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetrySimulatorService.class);
-    private static final String ACTIVE_STATUS = "ACTIVE";
+    private static final String ACTIVE_STATUS = "ACTIVO";
     private static final int VALUE_SCALE = 2;
 
     private final CropBatchRepositoryPort cropBatchPort;
@@ -77,7 +77,7 @@ public class TelemetrySimulatorService {
     public void tick() {
         List<CropBatch> active = cropBatchPort.findByStatus(ACTIVE_STATUS);
         if (active.isEmpty()) {
-            log.debug("Simulador: sin lotes ACTIVE, nada que publicar");
+            log.debug("Simulador: sin lotes ACTIVO, nada que publicar");
             return;
         }
 
@@ -90,7 +90,7 @@ public class TelemetrySimulatorService {
                 published++;
             }
         }
-        log.debug("Simulador: {} eventos publicados de {} lotes ACTIVE",
+        log.debug("Simulador: {} eventos publicados de {} lotes ACTIVO",
                 published, active.size());
     }
 
