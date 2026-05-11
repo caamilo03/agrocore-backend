@@ -39,4 +39,9 @@ public class TelemetryService implements SaveTelemetryReadingUseCase, QueryTelem
     public List<TelemetryReading> getInRange(UUID idCropBatch, Instant from, Instant to, int limit) {
         return repositoryPort.findByBatchInRange(idCropBatch, from, to, limit);
     }
+
+    @Override
+    public List<TelemetryReading> getRepresentativeInRange(UUID idCropBatch, Instant from, Instant to, int maxBuckets) {
+        return repositoryPort.findRepresentativeInRange(idCropBatch, from, to, maxBuckets);
+    }
 }

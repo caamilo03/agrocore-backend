@@ -18,4 +18,16 @@ public interface TelemetryRepositoryPort {
 
     /** Lecturas del lote en el rango [from, to], ordenadas por recordedAt ASC. */
     List<TelemetryReading> findByBatchInRange(UUID idCropBatch, Instant from, Instant to, int limit);
+
+    /**
+     * Lecturas representativas del lote en el rango [from, to], ordenadas por
+     * recordedAt ASC. A diferencia de {@link #findByBatchInRange}, hace
+     * downsampling temporal (buckets por hora o por dia segun la duracion
+     * del rango) para que el resultado cubra todo el periodo en lugar de
+     * gastarse el cap en las primeras horas.
+     *
+     * Cada elemento devuelto tiene id=null porque es un agregado, no una
+     * fila real de la tabla.
+     */
+    List<TelemetryReading> findRepresentativeInRange(UUID idCropBatch, Instant from, Instant to, int maxBuckets);
 }

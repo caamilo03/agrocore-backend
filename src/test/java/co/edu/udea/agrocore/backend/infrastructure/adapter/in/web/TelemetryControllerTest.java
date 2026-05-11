@@ -85,7 +85,7 @@ class TelemetryControllerTest {
     void range_returnsReadings() throws Exception {
         Instant from = Instant.parse("2026-05-01T00:00:00Z");
         Instant to = Instant.parse("2026-05-02T00:00:00Z");
-        when(queryTelemetryUseCase.getInRange(BATCH_ID, from, to, 5000))
+        when(queryTelemetryUseCase.getRepresentativeInRange(BATCH_ID, from, to, 5000))
                 .thenReturn(List.of(sample(10L), sample(11L)));
 
         mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
@@ -99,7 +99,7 @@ class TelemetryControllerTest {
     void range_serializesRecordedAtAsIsoInstantWithZ() throws Exception {
         Instant from = Instant.parse("2026-05-01T00:00:00Z");
         Instant to = Instant.parse("2026-05-02T00:00:00Z");
-        when(queryTelemetryUseCase.getInRange(BATCH_ID, from, to, 5000))
+        when(queryTelemetryUseCase.getRepresentativeInRange(BATCH_ID, from, to, 5000))
                 .thenReturn(List.of(sample(10L)));
 
         mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)

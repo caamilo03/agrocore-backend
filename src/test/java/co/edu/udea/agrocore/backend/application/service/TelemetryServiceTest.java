@@ -76,6 +76,20 @@ class TelemetryServiceTest {
         verify(port).findByBatchInRange(batchId, from, to, 5000);
     }
 
+    @Test
+    void getRepresentativeInRange_delegatesWithBoundsAndMaxBuckets() {
+        UUID batchId = UUID.randomUUID();
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-08T00:00:00Z");
+        List<TelemetryReading> buckets = List.of(sampleReading(null), sampleReading(null));
+        when(port.findRepresentativeInRange(batchId, from, to, 5000)).thenReturn(buckets);
+
+        List<TelemetryReading> result = service.getRepresentativeInRange(batchId, from, to, 5000);
+
+        assertThat(result).isEqualTo(buckets);
+        verify(port).findRepresentativeInRange(batchId, from, to, 5000);
+    }
+
     private TelemetryReading sampleReading(Long id) {
         return TelemetryReading.builder()
                 .id(id)
