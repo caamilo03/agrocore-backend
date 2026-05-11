@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -123,7 +123,7 @@ public class TelemetrySimulatorService {
 
         return Optional.of(TelemetryReading.builder()
                 .idCropBatch(batch.getId())
-                .recordedAt(LocalDateTime.now(clock))
+                .recordedAt(Instant.now(clock))
                 .temperature(temperature)
                 .humidity(humidity)
                 .co2(co2)

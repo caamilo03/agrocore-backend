@@ -9,7 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -83,8 +83,8 @@ class TelemetryControllerTest {
 
     @Test
     void range_returnsReadings() throws Exception {
-        LocalDateTime from = LocalDateTime.parse("2026-05-01T00:00:00");
-        LocalDateTime to = LocalDateTime.parse("2026-05-02T00:00:00");
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-02T00:00:00Z");
         when(queryTelemetryUseCase.getInRange(BATCH_ID, from, to, 5000))
                 .thenReturn(List.of(sample(10L), sample(11L)));
 
@@ -96,9 +96,23 @@ class TelemetryControllerTest {
     }
 
     @Test
+    void range_serializesRecordedAtAsIsoInstantWithZ() throws Exception {
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-02T00:00:00Z");
+        when(queryTelemetryUseCase.getInRange(BATCH_ID, from, to, 5000))
+                .thenReturn(List.of(sample(10L)));
+
+        mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
+                        .param("from", from.toString())
+                        .param("to", to.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].recordedAt").value("2026-05-03T12:00:00Z"));
+    }
+
+    @Test
     void range_returns400WhenFromAfterTo() throws Exception {
-        LocalDateTime from = LocalDateTime.parse("2026-05-02T00:00:00");
-        LocalDateTime to = LocalDateTime.parse("2026-05-01T00:00:00");
+        Instant from = Instant.parse("2026-05-02T00:00:00Z");
+        Instant to = Instant.parse("2026-05-01T00:00:00Z");
 
         mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
                         .param("from", from.toString())
@@ -112,7 +126,7 @@ class TelemetryControllerTest {
         return TelemetryReading.builder()
                 .id(id)
                 .idCropBatch(BATCH_ID)
-                .recordedAt(LocalDateTime.parse("2026-05-03T12:00:00"))
+                .recordedAt(Instant.parse("2026-05-03T12:00:00Z"))
                 .temperature(new BigDecimal("22.50"))
                 .humidity(new BigDecimal("65.00"))
                 .co2(new BigDecimal("420.00"))

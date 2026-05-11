@@ -6,7 +6,7 @@ import co.edu.udea.agrocore.backend.domain.port.in.SaveTelemetryReadingUseCase;
 import co.edu.udea.agrocore.backend.domain.port.out.TelemetryRepositoryPort;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,7 +36,7 @@ public class TelemetryService implements SaveTelemetryReadingUseCase, QueryTelem
     }
 
     @Override
-    public List<TelemetryReading> getInRange(UUID idCropBatch, LocalDateTime from, LocalDateTime to, int limit) {
+    public List<TelemetryReading> getInRange(UUID idCropBatch, Instant from, Instant to, int limit) {
         return repositoryPort.findByBatchInRange(idCropBatch, from, to, limit);
     }
 }

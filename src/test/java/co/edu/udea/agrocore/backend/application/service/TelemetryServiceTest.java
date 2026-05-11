@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -65,8 +65,8 @@ class TelemetryServiceTest {
     @Test
     void getInRange_delegatesWithBoundsAndLimit() {
         UUID batchId = UUID.randomUUID();
-        LocalDateTime from = LocalDateTime.parse("2026-05-01T00:00:00");
-        LocalDateTime to = LocalDateTime.parse("2026-05-02T00:00:00");
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-02T00:00:00Z");
         List<TelemetryReading> readings = List.of(sampleReading(3L));
         when(port.findByBatchInRange(batchId, from, to, 5000)).thenReturn(readings);
 
@@ -80,7 +80,7 @@ class TelemetryServiceTest {
         return TelemetryReading.builder()
                 .id(id)
                 .idCropBatch(UUID.randomUUID())
-                .recordedAt(LocalDateTime.now())
+                .recordedAt(Instant.now())
                 .temperature(new BigDecimal("22.50"))
                 .humidity(new BigDecimal("65.00"))
                 .co2(new BigDecimal("420.00"))

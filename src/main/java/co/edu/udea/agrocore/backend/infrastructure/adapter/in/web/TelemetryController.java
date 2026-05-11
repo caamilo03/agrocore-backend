@@ -6,12 +6,18 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Endpoints de consulta de telemetria. Pensados para alimentar dashboards.
+ *
+ * Los parametros from/to del /range se reciben como OffsetDateTime (ISO 8601
+ * con offset, ej. 2026-05-03T12:00:00Z) y se convierten a Instant para el
+ * caso de uso. Asi forzamos al cliente a declarar la zona y evitamos
+ * ambiguedades como las que motivaron migrar el dominio a Instant.
  *
  * Las cotas (default/max de limit) son defensivas: protegen al backend y a
  * la BD ante consultas accidentalmente enormes.
@@ -51,12 +57,14 @@ public class TelemetryController {
     @GetMapping("/range")
     public ResponseEntity<List<TelemetryReading>> range(
             @PathVariable UUID batchId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to) {
         if (from.isAfter(to)) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(queryTelemetryUseCase.getInRange(batchId, from, to, RANGE_MAX_LIMIT));
+        Instant fromInstant = from.toInstant();
+        Instant toInstant = to.toInstant();
+        return ResponseEntity.ok(queryTelemetryUseCase.getInRange(batchId, fromInstant, toInstant, RANGE_MAX_LIMIT));
     }
 
     private int clamp(int value, int min, int max) {

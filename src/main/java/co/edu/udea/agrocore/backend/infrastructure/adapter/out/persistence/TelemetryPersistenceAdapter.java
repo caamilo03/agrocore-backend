@@ -7,7 +7,7 @@ import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.repos
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,7 +44,7 @@ public class TelemetryPersistenceAdapter implements TelemetryRepositoryPort {
     }
 
     @Override
-    public List<TelemetryReading> findByBatchInRange(UUID idCropBatch, LocalDateTime from, LocalDateTime to, int limit) {
+    public List<TelemetryReading> findByBatchInRange(UUID idCropBatch, Instant from, Instant to, int limit) {
         return jpaRepository
                 .findByIdCropBatchAndRecordedAtBetweenOrderByRecordedAtAsc(
                         idCropBatch, from, to, PageRequest.of(0, limit))

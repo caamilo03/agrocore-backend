@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -24,8 +24,8 @@ public class TelemetryReadingEntity {
     @Column(name = "id_crop_batch")
     private UUID idCropBatch;
 
-    @Column(name = "recorded_at")
-    private LocalDateTime recordedAt;
+    @Column(name = "recorded_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private Instant recordedAt;
 
     private BigDecimal temperature;
 
