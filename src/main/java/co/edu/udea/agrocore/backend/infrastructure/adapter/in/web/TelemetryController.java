@@ -2,22 +2,26 @@ package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
 
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
 import co.edu.udea.agrocore.backend.domain.port.in.QueryTelemetryUseCase;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Endpoints de consulta de telemetria. Pensados para alimentar dashboards.
  *
- * Los parametros from/to del /range se reciben como OffsetDateTime (ISO 8601
- * con offset, ej. 2026-05-03T12:00:00Z) y se convierten a Instant para el
- * caso de uso. Asi forzamos al cliente a declarar la zona y evitamos
- * ambiguedades como las que motivaron migrar el dominio a Instant.
+ * Los parametros from/to del /range se reciben como String y se parsean con
+ * tolerancia: primero se intenta OffsetDateTime (ISO 8601 con zona, ej.
+ * "2026-05-03T12:00:00Z"), y si falla se interpreta como LocalDateTime
+ * asumiendo UTC (ej. "2026-05-03T12:00:00" enviado por clientes legacy).
+ * Esto mantiene la compatibilidad con el frontend sin sacrificar la
+ * precision de zona en clientes nuevos.
  *
  * Las cotas (default/max de limit) son defensivas: protegen al backend y a
  * la BD ante consultas accidentalmente enormes.
@@ -60,22 +64,47 @@ public class TelemetryController {
 
     /**
      * Lecturas representativas en [from, to] (ASC), con downsampling temporal
-     * (bucket por hora si el rango es <= 7 dias, por dia en otro caso). Esto
-     * garantiza que la respuesta cubra todo el periodo solicitado en lugar
-     * de gastarse en las primeras horas. Cap defensivo de 5000 buckets.
+     * (bucket por hora si el rango es <= 7 dias, por dia en otro caso). Cubre
+     * todo el periodo solicitado. Cap defensivo de 5000 buckets.
+     *
+     * Los parametros from/to aceptan tanto ISO 8601 con zona (2026-05-03T12:00:00Z)
+     * como sin zona (2026-05-03T12:00:00); en este ultimo caso se asume UTC.
      */
     @GetMapping("/range")
     public ResponseEntity<List<TelemetryReading>> range(
             @PathVariable UUID batchId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to) {
-        if (from.isAfter(to)) {
+            @RequestParam String from,
+            @RequestParam String to) {
+        Instant fromInstant = parseInstant(from);
+        Instant toInstant = parseInstant(to);
+        if (fromInstant == null || toInstant == null) {
             return ResponseEntity.badRequest().build();
         }
-        Instant fromInstant = from.toInstant();
-        Instant toInstant = to.toInstant();
+        if (fromInstant.isAfter(toInstant)) {
+            return ResponseEntity.badRequest().build();
+        }
         return ResponseEntity.ok(
                 queryTelemetryUseCase.getRepresentativeInRange(batchId, fromInstant, toInstant, RANGE_MAX_BUCKETS));
+    }
+
+    /**
+     * Parsea un string de fecha/hora a Instant tolerando dos formatos:
+     * - Con zona: "2026-05-03T12:00:00Z" o "2026-05-03T12:00:00+05:00"
+     * - Sin zona: "2026-05-03T12:00:00" (se asume UTC)
+     * Devuelve null si el formato no es reconocido.
+     */
+    static Instant parseInstant(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return OffsetDateTime.parse(value).toInstant();
+        } catch (DateTimeParseException ignored) {
+            // no tiene zona — intentar como LocalDateTime y asumir UTC
+        }
+        try {
+            return LocalDateTime.parse(value).toInstant(ZoneOffset.UTC);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
     }
 
     private int clamp(int value, int min, int max) {

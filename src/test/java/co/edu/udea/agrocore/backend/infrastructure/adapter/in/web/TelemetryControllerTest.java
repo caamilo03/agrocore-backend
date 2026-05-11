@@ -3,6 +3,8 @@ package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
 import co.edu.udea.agrocore.backend.domain.port.in.QueryTelemetryUseCase;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -82,17 +85,50 @@ class TelemetryControllerTest {
     }
 
     @Test
-    void range_returnsReadings() throws Exception {
+    void range_acceptsParamsWithZone() throws Exception {
         Instant from = Instant.parse("2026-05-01T00:00:00Z");
         Instant to = Instant.parse("2026-05-02T00:00:00Z");
         when(queryTelemetryUseCase.getRepresentativeInRange(BATCH_ID, from, to, 5000))
                 .thenReturn(List.of(sample(10L), sample(11L)));
 
         mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
-                        .param("from", from.toString())
-                        .param("to", to.toString()))
+                        .param("from", "2026-05-01T00:00:00Z")
+                        .param("to", "2026-05-02T00:00:00Z"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void range_acceptsParamsWithoutZone_assumesUtc() throws Exception {
+        // El frontend envia sin zona — el backend asume UTC.
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-02T00:00:00Z");
+        when(queryTelemetryUseCase.getRepresentativeInRange(BATCH_ID, from, to, 5000))
+                .thenReturn(List.of(sample(10L)));
+
+        mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
+                        .param("from", "2026-05-01T00:00:00")   // sin Z
+                        .param("to", "2026-05-02T00:00:00"))     // sin Z
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        verify(queryTelemetryUseCase).getRepresentativeInRange(BATCH_ID, from, to, 5000);
+    }
+
+    @Test
+    void range_acceptsParamsWithOffset() throws Exception {
+        // Zona +05:00 => equivale a 2026-04-30T19:00:00Z - 2026-05-01T19:00:00Z
+        Instant from = Instant.parse("2026-04-30T19:00:00Z");
+        Instant to = Instant.parse("2026-05-01T19:00:00Z");
+        when(queryTelemetryUseCase.getRepresentativeInRange(BATCH_ID, from, to, 5000))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
+                        .param("from", "2026-05-01T00:00:00+05:00")
+                        .param("to", "2026-05-02T00:00:00+05:00"))
+                .andExpect(status().isOk());
+
+        verify(queryTelemetryUseCase).getRepresentativeInRange(BATCH_ID, from, to, 5000);
     }
 
     @Test
@@ -103,23 +139,51 @@ class TelemetryControllerTest {
                 .thenReturn(List.of(sample(10L)));
 
         mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
-                        .param("from", from.toString())
-                        .param("to", to.toString()))
+                        .param("from", "2026-05-01T00:00:00Z")
+                        .param("to", "2026-05-02T00:00:00Z"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].recordedAt").value("2026-05-03T12:00:00Z"));
     }
 
     @Test
     void range_returns400WhenFromAfterTo() throws Exception {
-        Instant from = Instant.parse("2026-05-02T00:00:00Z");
-        Instant to = Instant.parse("2026-05-01T00:00:00Z");
-
         mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
-                        .param("from", from.toString())
-                        .param("to", to.toString()))
+                        .param("from", "2026-05-02T00:00:00Z")
+                        .param("to", "2026-05-01T00:00:00Z"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(queryTelemetryUseCase);
+    }
+
+    @Test
+    void range_returns400WhenParamsUnparseable() throws Exception {
+        mockMvc.perform(get(BASE + "/{id}/range", BATCH_ID)
+                        .param("from", "not-a-date")
+                        .param("to", "2026-05-01T00:00:00Z"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(queryTelemetryUseCase);
+    }
+
+    // -- Tests unitarios de parseInstant (sin levantar contexto Spring) --
+
+    @ParameterizedTest
+    @CsvSource({
+            "2026-05-03T12:00:00Z,          2026-05-03T12:00:00Z",
+            "2026-05-03T12:00:00,            2026-05-03T12:00:00Z",
+            "2026-05-03T12:00:00+05:00,      2026-05-03T07:00:00Z",
+            "2026-05-03T12:00:00.123456Z,    2026-05-03T12:00:00.123456Z",
+    })
+    void parseInstant_handlesAllSupportedFormats(String input, String expectedUtc) {
+        Instant result = TelemetryController.parseInstant(input.trim());
+        assertThat(result).isEqualTo(Instant.parse(expectedUtc.trim()));
+    }
+
+    @Test
+    void parseInstant_returnsNullForGarbage() {
+        assertThat(TelemetryController.parseInstant("not-a-date")).isNull();
+        assertThat(TelemetryController.parseInstant("")).isNull();
+        assertThat(TelemetryController.parseInstant(null)).isNull();
     }
 
     private TelemetryReading sample(Long id) {
