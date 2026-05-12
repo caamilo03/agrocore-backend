@@ -4,8 +4,10 @@ import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.entit
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
 public interface JpaCropBatchRepository extends JpaRepository<CropBatchEntity, UUID> {
+    List<CropBatchEntity> findByStatus(String status);
 }

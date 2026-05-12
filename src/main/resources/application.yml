@@ -19,14 +19,32 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # Flyway (Control de versiones de BD)
+  # Flyway
   flyway:
     enabled: true
     baseline-on-migrate: true
 
-  # Kafka
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: agrocore-telemetry-group
-      auto-offset-reset: earliest
+  # Redis (transporte de eventos de telemetria via Streams)
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
+
+# Configuracion AgroCore
+agrocore:
+  redis:
+    streams:
+      # Nombre del stream (incluye version; cambios incompatibles -> stream nuevo).
+      telemetry: agrocore.telemetry.readings.v1
+      consumer-group: agrocore-telemetry-group
+      consumer-name: ${HOSTNAME:agrocore-backend}
+      # MAXLEN aproximado: limita el tamano del stream en Redis para no
+      # consumir RAM indefinidamente. La BD ya guarda el historico real.
+      max-len: 10000
+      # Timeout del poll del listener container.
+      poll-timeout-ms: 1000
+  simulator:
+    enabled: ${AGROCORE_SIMULATOR_ENABLED:true}
+    interval-ms: ${AGROCORE_SIMULATOR_INTERVAL_MS:30000}
+    variance-percent: 5
