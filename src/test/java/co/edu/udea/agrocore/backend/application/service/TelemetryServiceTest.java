@@ -90,6 +90,24 @@ class TelemetryServiceTest {
         verify(port).findRepresentativeInRange(batchId, from, to, 5000);
     }
 
+    @Test
+    void getStats_delegatesToRepositoryPort() {
+        UUID batchId = UUID.randomUUID();
+        Instant from = Instant.parse("2026-04-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-01T00:00:00Z");
+        co.edu.udea.agrocore.backend.domain.model.OptimalRanges ranges =
+                new co.edu.udea.agrocore.backend.domain.model.OptimalRanges(
+                        new BigDecimal("18.00"), new BigDecimal("28.00"),
+                        new BigDecimal("60.00"), new BigDecimal("80.00"),
+                        new BigDecimal("350.00"), new BigDecimal("600.00"));
+        co.edu.udea.agrocore.backend.domain.model.TelemetryStats expected =
+                co.edu.udea.agrocore.backend.domain.model.TelemetryStats.empty();
+        when(port.computeStats(batchId, from, to, ranges)).thenReturn(expected);
+
+        assertThat(service.getStats(batchId, from, to, ranges)).isSameAs(expected);
+        verify(port).computeStats(batchId, from, to, ranges);
+    }
+
     private TelemetryReading sampleReading(Long id) {
         return TelemetryReading.builder()
                 .id(id)

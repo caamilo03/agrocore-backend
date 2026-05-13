@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -52,4 +53,41 @@ public interface JpaTelemetryRepository extends JpaRepository<TelemetryReadingEn
             @Param("to") Instant to,
             @Param("granularity") String granularity,
             @Param("maxBuckets") int maxBuckets);
+
+    /**
+     * Agrega las lecturas a un unico tuple con count + avg/min/max y % en
+     * rango optimo de cada variable. Devuelve siempre 1 fila (los AVG/MIN/MAX
+     * son null si count == 0).
+     *
+     * Columnas devueltas (en orden):
+     * <pre>[0] count                       (BIGINT)
+     * [1] avg_temperature             (NUMERIC)
+     * [2] min_temperature             (NUMERIC)
+     * [3] max_temperature             (NUMERIC)
+     * [4] temperature_in_range_pct    (NUMERIC, 0-100)
+     * [5..7]  humidity avg/min/max
+     * [8]     humidity_in_range_pct
+     * [9..11] co2 avg/min/max
+     * [12]    co2_in_range_pct</pre>
+     */
+    @Query(value = """
+            SELECT
+              COUNT(*),
+              AVG(temperature), MIN(temperature), MAX(temperature),
+              AVG(CASE WHEN temperature BETWEEN :tMin AND :tMax THEN 1.0 ELSE 0.0 END) * 100,
+              AVG(humidity), MIN(humidity), MAX(humidity),
+              AVG(CASE WHEN humidity BETWEEN :hMin AND :hMax THEN 1.0 ELSE 0.0 END) * 100,
+              AVG(co2), MIN(co2), MAX(co2),
+              AVG(CASE WHEN co2 BETWEEN :cMin AND :cMax THEN 1.0 ELSE 0.0 END) * 100
+            FROM telemetry_reading
+            WHERE id_crop_batch = :batchId
+              AND recorded_at BETWEEN :from AND :to
+            """, nativeQuery = true)
+    Object[] computeStatsRow(
+            @Param("batchId") UUID batchId,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("tMin") BigDecimal tMin, @Param("tMax") BigDecimal tMax,
+            @Param("hMin") BigDecimal hMin, @Param("hMax") BigDecimal hMax,
+            @Param("cMin") BigDecimal cMin, @Param("cMax") BigDecimal cMax);
 }

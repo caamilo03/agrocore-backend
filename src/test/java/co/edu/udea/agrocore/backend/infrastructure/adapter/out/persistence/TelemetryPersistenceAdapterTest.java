@@ -134,6 +134,85 @@ class TelemetryPersistenceAdapterTest {
         }
     }
 
+    // -- computeStats --
+
+    @org.junit.jupiter.api.Test
+    void computeStats_mapsAllAggregates() {
+        co.edu.udea.agrocore.backend.domain.model.OptimalRanges ranges =
+                new co.edu.udea.agrocore.backend.domain.model.OptimalRanges(
+                        bd("18.00"), bd("28.00"),
+                        bd("60.00"), bd("80.00"),
+                        bd("350.00"), bd("600.00"));
+        Object[] sqlRow = new Object[]{
+                86400L,
+                bd("22.4"), bd("14.1"), bd("31.2"), bd("87.5"),
+                bd("68.3"), bd("42.0"), bd("91.0"), bd("76.2"),
+                bd("480.5"), bd("320.0"), bd("720.0"), bd("91.0")
+        };
+        when(jpaRepository.computeStatsRow(
+                eq(BATCH_ID), any(), any(),
+                eq(bd("18.00")), eq(bd("28.00")),
+                eq(bd("60.00")), eq(bd("80.00")),
+                eq(bd("350.00")), eq(bd("600.00")))).thenReturn(sqlRow);
+
+        Instant from = Instant.parse("2026-04-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-01T00:00:00Z");
+        co.edu.udea.agrocore.backend.domain.model.TelemetryStats stats =
+                adapter.computeStats(BATCH_ID, from, to, ranges);
+
+        assertThat(stats.count()).isEqualTo(86400L);
+        assertThat(stats.avgTemperature()).isEqualByComparingTo("22.40");
+        assertThat(stats.minTemperature()).isEqualByComparingTo("14.10");
+        assertThat(stats.maxTemperature()).isEqualByComparingTo("31.20");
+        assertThat(stats.temperatureInRangePct()).isEqualByComparingTo("87.50");
+        assertThat(stats.avgHumidity()).isEqualByComparingTo("68.30");
+        assertThat(stats.humidityInRangePct()).isEqualByComparingTo("76.20");
+        assertThat(stats.co2InRangePct()).isEqualByComparingTo("91.00");
+    }
+
+    @org.junit.jupiter.api.Test
+    void computeStats_returnsEmptyWhenCountIsZero() {
+        co.edu.udea.agrocore.backend.domain.model.OptimalRanges ranges =
+                new co.edu.udea.agrocore.backend.domain.model.OptimalRanges(
+                        bd("18.00"), bd("28.00"),
+                        bd("60.00"), bd("80.00"),
+                        bd("350.00"), bd("600.00"));
+        Object[] sqlRow = new Object[]{0L, null, null, null, null, null, null, null, null, null, null, null, null};
+        when(jpaRepository.computeStatsRow(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(sqlRow);
+
+        co.edu.udea.agrocore.backend.domain.model.TelemetryStats stats =
+                adapter.computeStats(BATCH_ID, Instant.now(), Instant.now(), ranges);
+
+        assertThat(stats.count()).isZero();
+        assertThat(stats.avgTemperature()).isNull();
+        assertThat(stats.temperatureInRangePct()).isNull();
+    }
+
+    @org.junit.jupiter.api.Test
+    void computeStats_handlesWrappedRowFromPgjdbc() {
+        // Algunas versiones de Hibernate envuelven el row en Object[1].
+        co.edu.udea.agrocore.backend.domain.model.OptimalRanges ranges =
+                new co.edu.udea.agrocore.backend.domain.model.OptimalRanges(
+                        bd("18.00"), bd("28.00"),
+                        bd("60.00"), bd("80.00"),
+                        bd("350.00"), bd("600.00"));
+        Object[] innerRow = new Object[]{
+                10L,
+                bd("22.0"), bd("20.0"), bd("24.0"), bd("100.0"),
+                bd("65.0"), bd("60.0"), bd("70.0"), bd("100.0"),
+                bd("400.0"), bd("380.0"), bd("420.0"), bd("100.0")
+        };
+        when(jpaRepository.computeStatsRow(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new Object[]{innerRow});
+
+        co.edu.udea.agrocore.backend.domain.model.TelemetryStats stats =
+                adapter.computeStats(BATCH_ID, Instant.now(), Instant.now(), ranges);
+
+        assertThat(stats.count()).isEqualTo(10L);
+        assertThat(stats.avgTemperature()).isEqualByComparingTo("22.00");
+    }
+
     // -- helpers --
 
     private static Object[] row(String iso, String temp, String hum, String co2) {
