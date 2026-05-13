@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -123,6 +124,46 @@ class CropBatchControllerTest {
                         .contentType("application/json")
                         .content("{\"yieldKg\": 5.0, \"endDate\": \"2026-05-13T15:00:00\"}"))
                 .andExpect(status().isOk());
+    }
+
+    // ----- GET /batches?status= -----
+
+    @org.junit.jupiter.api.Test
+    void getAll_withoutStatusParam_returnsAll() throws Exception {
+        when(getAllUseCase.getAll((CropBatchStatus) null))
+                .thenReturn(java.util.List.of(sampleHarvested()));
+
+        mockMvc.perform(get(BASE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @org.junit.jupiter.api.Test
+    void getAll_withCosechadoFilter_callsServiceWithEnum() throws Exception {
+        when(getAllUseCase.getAll(CropBatchStatus.COSECHADO))
+                .thenReturn(java.util.List.of(sampleHarvested()));
+
+        mockMvc.perform(get(BASE).param("status", "COSECHADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("COSECHADO"));
+    }
+
+    @org.junit.jupiter.api.Test
+    void getAll_withLowercaseStatus_isAccepted() throws Exception {
+        when(getAllUseCase.getAll(CropBatchStatus.ACTIVO))
+                .thenReturn(java.util.List.of());
+
+        mockMvc.perform(get(BASE).param("status", "activo"))
+                .andExpect(status().isOk());
+    }
+
+    @org.junit.jupiter.api.Test
+    void getAll_withInvalidStatus_returns400() throws Exception {
+        mockMvc.perform(get(BASE).param("status", "FOO"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("FOO")));
+
+        verifyNoInteractions(getAllUseCase);
     }
 
     // ----- parseEndDate unit -----

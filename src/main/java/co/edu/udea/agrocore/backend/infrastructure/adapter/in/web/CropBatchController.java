@@ -1,6 +1,7 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
 
 import co.edu.udea.agrocore.backend.domain.model.CropBatch;
+import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.port.in.*;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.in.web.dto.HarvestRequest;
 import org.springframework.http.ResponseEntity;
@@ -41,9 +42,17 @@ public class CropBatchController {
         return ResponseEntity.ok(createCropBatchUseCase.create(cropBatch));
     }
 
+    /**
+     * Lista lotes. Filtro opcional por estado (ACTIVO, COSECHADO, PERDIDO,
+     * case-insensitive). Si {@code status} no es valido, devuelve 400 via
+     * {@link GlobalExceptionHandler}.
+     */
     @GetMapping
-    public ResponseEntity<List<CropBatch>> getAll() {
-        return ResponseEntity.ok(getAllCropBatchUseCase.getAll());
+    public ResponseEntity<List<CropBatch>> getAll(@RequestParam(required = false) String status) {
+        CropBatchStatus filter = (status == null || status.isBlank())
+                ? null
+                : CropBatchStatus.fromString(status);
+        return ResponseEntity.ok(getAllCropBatchUseCase.getAll(filter));
     }
 
     @PutMapping("/{id}")

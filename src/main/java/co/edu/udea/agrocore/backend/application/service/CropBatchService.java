@@ -40,6 +40,14 @@ public class CropBatchService implements CreateCropBatchUseCase, GetAllCropBatch
     }
 
     @Override
+    public List<CropBatch> getAll(CropBatchStatus statusFilter) {
+        if (statusFilter == null) {
+            return repositoryPort.findAll();
+        }
+        return repositoryPort.findByStatus(statusFilter);
+    }
+
+    @Override
     public CropBatch update(UUID id, CropBatch cropBatch) {
         if (!repositoryPort.existsById(id)) {
             throw new NoSuchElementException("Lote no encontrado");
