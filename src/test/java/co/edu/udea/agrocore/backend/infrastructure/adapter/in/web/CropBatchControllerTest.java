@@ -1,0 +1,158 @@
+package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
+
+import co.edu.udea.agrocore.backend.application.exception.InvalidBatchStateException;
+import co.edu.udea.agrocore.backend.domain.model.CropBatch;
+import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
+import co.edu.udea.agrocore.backend.domain.port.in.CreateCropBatchUseCase;
+import co.edu.udea.agrocore.backend.domain.port.in.DeleteCropBatchUseCase;
+import co.edu.udea.agrocore.backend.domain.port.in.GetAllCropBatchUseCase;
+import co.edu.udea.agrocore.backend.domain.port.in.HarvestCropBatchUseCase;
+import co.edu.udea.agrocore.backend.domain.port.in.UpdateCropBatchUseCase;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(CropBatchController.class)
+@Import(GlobalExceptionHandler.class)
+class CropBatchControllerTest {
+
+    private static final String BASE = "/api/v1/batches";
+    private static final UUID BATCH_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean private CreateCropBatchUseCase createUseCase;
+    @MockitoBean private GetAllCropBatchUseCase getAllUseCase;
+    @MockitoBean private UpdateCropBatchUseCase updateUseCase;
+    @MockitoBean private DeleteCropBatchUseCase deleteUseCase;
+    @MockitoBean private HarvestCropBatchUseCase harvestUseCase;
+
+    // ----- POST /{id}/harvest -----
+
+    @Test
+    void harvest_returns200WhenSuccessful() throws Exception {
+        CropBatch harvested = sampleHarvested();
+        when(harvestUseCase.harvest(eq(BATCH_ID), any(BigDecimal.class), any())).thenReturn(harvested);
+
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": 12.50}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COSECHADO"))
+                .andExpect(jsonPath("$.yieldKg").value(12.50));
+    }
+
+    @Test
+    void harvest_returns409WhenBatchAlreadyHarvested() throws Exception {
+        when(harvestUseCase.harvest(eq(BATCH_ID), any(BigDecimal.class), any()))
+                .thenThrow(new InvalidBatchStateException("El lote no se puede cosechar: estado actual es COSECHADO"));
+
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": 5.0}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("COSECHADO")));
+    }
+
+    @Test
+    void harvest_returns404WhenBatchMissing() throws Exception {
+        when(harvestUseCase.harvest(eq(BATCH_ID), any(BigDecimal.class), any()))
+                .thenThrow(new NoSuchElementException("Lote no encontrado"));
+
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": 5.0}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void harvest_returns400WhenYieldInvalid() throws Exception {
+        when(harvestUseCase.harvest(eq(BATCH_ID), any(BigDecimal.class), any()))
+                .thenThrow(new IllegalArgumentException("yieldKg debe ser un numero positivo"));
+
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": -1}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void harvest_returns400WhenEndDateUnparseable() throws Exception {
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": 5.0, \"endDate\": \"not-a-date\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(harvestUseCase);
+    }
+
+    @Test
+    void harvest_acceptsEndDateWithZone() throws Exception {
+        CropBatch harvested = sampleHarvested();
+        when(harvestUseCase.harvest(eq(BATCH_ID), any(BigDecimal.class), any())).thenReturn(harvested);
+
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": 5.0, \"endDate\": \"2026-05-13T15:00:00Z\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void harvest_acceptsEndDateWithoutZone() throws Exception {
+        CropBatch harvested = sampleHarvested();
+        when(harvestUseCase.harvest(eq(BATCH_ID), any(BigDecimal.class), any())).thenReturn(harvested);
+
+        mockMvc.perform(post(BASE + "/{id}/harvest", BATCH_ID)
+                        .contentType("application/json")
+                        .content("{\"yieldKg\": 5.0, \"endDate\": \"2026-05-13T15:00:00\"}"))
+                .andExpect(status().isOk());
+    }
+
+    // ----- parseEndDate unit -----
+
+    @Test
+    void parseEndDate_returnsNullForBlankInput() {
+        assertThat(CropBatchController.parseEndDate(null)).isNull();
+        assertThat(CropBatchController.parseEndDate("")).isNull();
+        assertThat(CropBatchController.parseEndDate("   ")).isNull();
+    }
+
+    @Test
+    void parseEndDate_throwsForGarbageInput() {
+        try {
+            CropBatchController.parseEndDate("not-a-date");
+            org.assertj.core.api.Assertions.fail("Expected IllegalArgumentException");
+        } catch (IllegalArgumentException expected) {
+            assertThat(expected.getMessage()).contains("not-a-date");
+        }
+    }
+
+    // ----- helper -----
+
+    private CropBatch sampleHarvested() {
+        return CropBatch.builder()
+                .id(BATCH_ID)
+                .status(CropBatchStatus.COSECHADO)
+                .yieldKg(new BigDecimal("12.50"))
+                .startDate(LocalDateTime.of(2026, 4, 1, 0, 0))
+                .endDate(LocalDateTime.of(2026, 5, 13, 15, 0))
+                .build();
+    }
+}
