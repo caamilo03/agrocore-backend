@@ -1,6 +1,8 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence;
 
+import co.edu.udea.agrocore.backend.domain.model.OptimalRanges;
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
+import co.edu.udea.agrocore.backend.domain.model.TelemetryStats;
 import co.edu.udea.agrocore.backend.domain.port.out.TelemetryRepositoryPort;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.entity.TelemetryReadingEntity;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.repository.JpaTelemetryRepository;
@@ -69,6 +71,47 @@ public class TelemetryPersistenceAdapter implements TelemetryRepositoryPort {
         return rows.stream()
                 .map(row -> toDomainBucket(idCropBatch, row))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public TelemetryStats computeStats(UUID idCropBatch, Instant from, Instant to, OptimalRanges ranges) {
+        Object[] row = jpaRepository.computeStatsRow(
+                idCropBatch, from, to,
+                ranges.minTemperature(), ranges.maxTemperature(),
+                ranges.minHumidity(), ranges.maxHumidity(),
+                ranges.minCo2(), ranges.maxCo2());
+        return mapStatsRow(row);
+    }
+
+    /**
+     * Mapea el tuple devuelto por {@code computeStatsRow}. Si count = 0,
+     * Postgres devuelve null en los agregados; respetamos esa semantica
+     * con {@link TelemetryStats#empty()}.
+     *
+     * pgjdbc puede envolver el row en otro Object[] dependiendo de la
+     * version de Hibernate; aceptamos ambos shapes.
+     */
+    private static TelemetryStats mapStatsRow(Object[] row) {
+        if (row == null || row.length == 0) {
+            return TelemetryStats.empty();
+        }
+        // Algunas versiones devuelven Object[1] que envuelve el row real.
+        Object[] r = (row.length == 1 && row[0] instanceof Object[]) ? (Object[]) row[0] : row;
+        long count = toLong(r[0]);
+        if (count == 0L) {
+            return TelemetryStats.empty();
+        }
+        return new TelemetryStats(
+                count,
+                scale(r[1]), scale(r[2]), scale(r[3]), scale(r[4]),
+                scale(r[5]), scale(r[6]), scale(r[7]), scale(r[8]),
+                scale(r[9]), scale(r[10]), scale(r[11]), scale(r[12]));
+    }
+
+    private static long toLong(Object value) {
+        if (value == null) return 0L;
+        if (value instanceof Number n) return n.longValue();
+        return Long.parseLong(value.toString());
     }
 
     /** 'hour' si el rango es <= 7 dias, 'day' en otro caso. */

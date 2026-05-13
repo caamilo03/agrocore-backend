@@ -1,6 +1,8 @@
 package co.edu.udea.agrocore.backend.domain.port.out;
 
+import co.edu.udea.agrocore.backend.domain.model.OptimalRanges;
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
+import co.edu.udea.agrocore.backend.domain.model.TelemetryStats;
 
 import java.time.Instant;
 import java.util.List;
@@ -30,4 +32,11 @@ public interface TelemetryRepositoryPort {
      * fila real de la tabla.
      */
     List<TelemetryReading> findRepresentativeInRange(UUID idCropBatch, Instant from, Instant to, int maxBuckets);
+
+    /**
+     * Agrega las lecturas del lote en {@code [from, to]} a un solo
+     * {@link TelemetryStats} (count, avg/min/max y % en rango optimo de
+     * cada variable). 1 query nativa, sin transferir filas.
+     */
+    TelemetryStats computeStats(UUID idCropBatch, Instant from, Instant to, OptimalRanges ranges);
 }
