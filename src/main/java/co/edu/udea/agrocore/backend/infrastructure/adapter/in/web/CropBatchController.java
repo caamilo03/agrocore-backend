@@ -4,6 +4,7 @@ import co.edu.udea.agrocore.backend.domain.model.CropBatch;
 import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.port.in.*;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.in.web.dto.HarvestRequest;
+import co.edu.udea.agrocore.backend.infrastructure.adapter.in.web.dto.TraceabilityResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,17 +25,20 @@ public class CropBatchController {
     private final UpdateCropBatchUseCase updateCropBatchUseCase;
     private final DeleteCropBatchUseCase deleteCropBatchUseCase;
     private final HarvestCropBatchUseCase harvestCropBatchUseCase;
+    private final GetCropBatchTraceabilityUseCase getTraceabilityUseCase;
 
     public CropBatchController(CreateCropBatchUseCase createCropBatchUseCase,
                                GetAllCropBatchUseCase getAllCropBatchUseCase,
                                UpdateCropBatchUseCase updateCropBatchUseCase,
                                DeleteCropBatchUseCase deleteCropBatchUseCase,
-                               HarvestCropBatchUseCase harvestCropBatchUseCase) {
+                               HarvestCropBatchUseCase harvestCropBatchUseCase,
+                               GetCropBatchTraceabilityUseCase getTraceabilityUseCase) {
         this.createCropBatchUseCase = createCropBatchUseCase;
         this.getAllCropBatchUseCase = getAllCropBatchUseCase;
         this.updateCropBatchUseCase = updateCropBatchUseCase;
         this.deleteCropBatchUseCase = deleteCropBatchUseCase;
         this.harvestCropBatchUseCase = harvestCropBatchUseCase;
+        this.getTraceabilityUseCase = getTraceabilityUseCase;
     }
 
     @PostMapping
@@ -81,6 +85,17 @@ public class CropBatchController {
     public ResponseEntity<CropBatch> harvest(@PathVariable UUID id, @RequestBody HarvestRequest request) {
         Instant endDate = parseEndDate(request.endDate());
         return ResponseEntity.ok(harvestCropBatchUseCase.harvest(id, request.yieldKg(), endDate));
+    }
+
+    /**
+     * Trazabilidad completa del lote: batch + species + substrate +
+     * suppliers + stats agregadas de telemetria del periodo de cultivo.
+     * 404 si el lote no existe; cualquier referencia eliminada se
+     * devuelve como null en el JSON.
+     */
+    @GetMapping("/{id}/traceability")
+    public ResponseEntity<TraceabilityResponse> traceability(@PathVariable UUID id) {
+        return ResponseEntity.ok(TraceabilityResponse.from(getTraceabilityUseCase.get(id)));
     }
 
     /**
