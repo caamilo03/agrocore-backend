@@ -119,6 +119,25 @@ class CropBatchServiceTest {
         verifyNoInteractions(port);
     }
 
+    // ----- getAll with filter -----
+
+    @Test
+    void getAll_withNullFilter_returnsAll() {
+        when(port.findAll()).thenReturn(java.util.List.of(activeBatch()));
+        assertThat(service.getAll((CropBatchStatus) null)).hasSize(1);
+        verify(port).findAll();
+        verify(port, never()).findByStatus(any());
+    }
+
+    @Test
+    void getAll_withFilter_delegatesToFindByStatus() {
+        when(port.findByStatus(CropBatchStatus.COSECHADO))
+                .thenReturn(java.util.List.of(batchWithStatus(CropBatchStatus.COSECHADO)));
+        assertThat(service.getAll(CropBatchStatus.COSECHADO)).hasSize(1);
+        verify(port).findByStatus(CropBatchStatus.COSECHADO);
+        verify(port, never()).findAll();
+    }
+
     // ----- update (smoke test for the existing behavior — ensures the
     // service still works after adding the Clock dependency) -----
 
