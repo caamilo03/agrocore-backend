@@ -1,6 +1,7 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence;
 
 import co.edu.udea.agrocore.backend.domain.model.CropBatch;
+import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.port.out.CropBatchRepositoryPort;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.entity.CropBatchEntity;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.repository.JpaCropBatchRepository;
@@ -33,7 +34,7 @@ public class CropBatchPersistenceAdapter implements CropBatchRepositoryPort {
     }
 
     @Override
-    public List<CropBatch> findByStatus(String status) {
+    public List<CropBatch> findByStatus(CropBatchStatus status) {
         return jpaRepository.findByStatus(status).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());

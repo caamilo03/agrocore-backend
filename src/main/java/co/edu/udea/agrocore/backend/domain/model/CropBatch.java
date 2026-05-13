@@ -22,6 +22,6 @@ public class CropBatch {
     private UUID idUser;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
-    private String status;
+    private CropBatchStatus status;
     private BigDecimal yieldKg;
 }
