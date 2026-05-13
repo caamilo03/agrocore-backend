@@ -1,5 +1,6 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.entity;
 
+import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -41,7 +42,9 @@ public class CropBatchEntity {
     @Column(name = "end_date")
     private LocalDateTime endDate;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50)
+    private CropBatchStatus status;
 
     @Column(name = "yield_kg")
     private BigDecimal yieldKg;
