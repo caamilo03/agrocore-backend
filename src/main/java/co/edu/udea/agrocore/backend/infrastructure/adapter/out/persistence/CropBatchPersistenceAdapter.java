@@ -8,6 +8,7 @@ import co.edu.udea.agrocore.backend.infrastructure.adapter.out.persistence.repos
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,11 @@ public class CropBatchPersistenceAdapter implements CropBatchRepositoryPort {
         return jpaRepository.findAll().stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<CropBatch> findById(UUID id) {
+        return jpaRepository.findById(id).map(this::toDomain);
     }
 
     @Override
