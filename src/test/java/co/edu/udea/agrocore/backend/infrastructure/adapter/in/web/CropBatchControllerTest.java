@@ -6,6 +6,7 @@ import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.port.in.CreateCropBatchUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.DeleteCropBatchUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.GetAllCropBatchUseCase;
+import co.edu.udea.agrocore.backend.domain.port.in.GetCropBatchTraceabilityUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.HarvestCropBatchUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.UpdateCropBatchUseCase;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,7 @@ class CropBatchControllerTest {
     @MockitoBean private UpdateCropBatchUseCase updateUseCase;
     @MockitoBean private DeleteCropBatchUseCase deleteUseCase;
     @MockitoBean private HarvestCropBatchUseCase harvestUseCase;
+    @MockitoBean private GetCropBatchTraceabilityUseCase traceabilityUseCase;
 
     // ----- POST /{id}/harvest -----
 
@@ -164,6 +166,71 @@ class CropBatchControllerTest {
                 .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("FOO")));
 
         verifyNoInteractions(getAllUseCase);
+    }
+
+    // ----- GET /{id}/traceability -----
+
+    @org.junit.jupiter.api.Test
+    void traceability_returnsFullPayload() throws Exception {
+        co.edu.udea.agrocore.backend.domain.model.Species species =
+                co.edu.udea.agrocore.backend.domain.model.Species.builder()
+                        .idSpecies(java.util.UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
+                        .name("Tomate")
+                        .minTemperature(new BigDecimal("18.00"))
+                        .maxTemperature(new BigDecimal("28.00"))
+                        .minHumidity(new BigDecimal("60.00"))
+                        .maxHumidity(new BigDecimal("80.00"))
+                        .minCo2(new BigDecimal("350.00"))
+                        .maxCo2(new BigDecimal("600.00"))
+                        .build();
+        co.edu.udea.agrocore.backend.domain.model.Substrate substrate =
+                new co.edu.udea.agrocore.backend.domain.model.Substrate(
+                        java.util.UUID.randomUUID(), "Fibra de coco", "desc");
+        co.edu.udea.agrocore.backend.domain.model.Supplier supplier =
+                new co.edu.udea.agrocore.backend.domain.model.Supplier(
+                        java.util.UUID.randomUUID(), "Semillas SAS", "x@y.com");
+        co.edu.udea.agrocore.backend.domain.model.TelemetryStats stats =
+                new co.edu.udea.agrocore.backend.domain.model.TelemetryStats(
+                        100L,
+                        new BigDecimal("22.40"), new BigDecimal("14.10"), new BigDecimal("31.20"), new BigDecimal("87.50"),
+                        new BigDecimal("68.30"), new BigDecimal("42.00"), new BigDecimal("91.00"), new BigDecimal("76.20"),
+                        new BigDecimal("480.50"), new BigDecimal("320.00"), new BigDecimal("720.00"), new BigDecimal("91.00"));
+        co.edu.udea.agrocore.backend.domain.model.TraceabilityView view =
+                new co.edu.udea.agrocore.backend.domain.model.TraceabilityView(
+                        sampleHarvested(), species, substrate, supplier, supplier, stats);
+        when(traceabilityUseCase.get(BATCH_ID)).thenReturn(view);
+
+        mockMvc.perform(get(BASE + "/{id}/traceability", BATCH_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.batch.status").value("COSECHADO"))
+                .andExpect(jsonPath("$.species.name").value("Tomate"))
+                .andExpect(jsonPath("$.substrate.typeName").value("Fibra de coco"))
+                .andExpect(jsonPath("$.speciesSupplier.nameSupplier").value("Semillas SAS"))
+                .andExpect(jsonPath("$.substrateSupplier.nameSupplier").value("Semillas SAS"))
+                .andExpect(jsonPath("$.telemetryStats.count").value(100))
+                .andExpect(jsonPath("$.telemetryStats.temperatureInRangePct").value(87.50));
+    }
+
+    @org.junit.jupiter.api.Test
+    void traceability_returnsPayloadWithNullSubobjects() throws Exception {
+        co.edu.udea.agrocore.backend.domain.model.TraceabilityView view =
+                new co.edu.udea.agrocore.backend.domain.model.TraceabilityView(
+                        sampleHarvested(), null, null, null, null, null);
+        when(traceabilityUseCase.get(BATCH_ID)).thenReturn(view);
+
+        mockMvc.perform(get(BASE + "/{id}/traceability", BATCH_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.batch.id").value(BATCH_ID.toString()))
+                .andExpect(jsonPath("$.species").doesNotExist())
+                .andExpect(jsonPath("$.telemetryStats").doesNotExist());
+    }
+
+    @org.junit.jupiter.api.Test
+    void traceability_returns404WhenBatchMissing() throws Exception {
+        when(traceabilityUseCase.get(BATCH_ID)).thenThrow(new NoSuchElementException("Lote no encontrado"));
+
+        mockMvc.perform(get(BASE + "/{id}/traceability", BATCH_ID))
+                .andExpect(status().isNotFound());
     }
 
     // ----- parseEndDate unit -----
