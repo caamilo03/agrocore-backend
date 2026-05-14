@@ -54,6 +54,27 @@ class CropBatchServiceTest {
     }
 
     @Test
+    void harvest_overwritesExistingPlannedEndDateWithNowWhenBodyOmitsEndDate() {
+        // Reproduce el bug: lote creado con endDate planificada futura.
+        // POST /harvest con body {"yieldKg": 1.0} sin endDate debe
+        // sobreescribir la endDate con Instant.now(), no conservar la planeada.
+        CropBatch batchWithPlannedEndDate = activeBatch();
+        batchWithPlannedEndDate.setEndDate(LocalDateTime.of(2026, 10, 23, 0, 0));
+
+        when(port.findById(BATCH_ID)).thenReturn(Optional.of(batchWithPlannedEndDate));
+        ArgumentCaptor<CropBatch> captor = ArgumentCaptor.forClass(CropBatch.class);
+        when(port.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.harvest(BATCH_ID, new BigDecimal("1.0"), null); // sin endDate
+
+        LocalDateTime savedEndDate = captor.getValue().getEndDate();
+        LocalDateTime expectedNow = LocalDateTime.ofInstant(FIXED_NOW, ZoneOffset.UTC);
+        // La endDate guardada debe ser FIXED_NOW, NO la planeada 2026-10-23.
+        assertThat(savedEndDate).isEqualTo(expectedNow);
+        assertThat(savedEndDate).isBefore(LocalDateTime.of(2026, 10, 23, 0, 0));
+    }
+
+    @Test
     void harvest_usesNowWhenEndDateIsNull() {
         CropBatch active = activeBatch();
         when(port.findById(BATCH_ID)).thenReturn(Optional.of(active));

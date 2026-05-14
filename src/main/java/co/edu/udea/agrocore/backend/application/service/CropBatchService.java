@@ -6,6 +6,7 @@ import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.port.in.*;
 import co.edu.udea.agrocore.backend.domain.port.out.CropBatchRepositoryPort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -62,6 +63,7 @@ public class CropBatchService implements CreateCropBatchUseCase, GetAllCropBatch
     }
 
     @Override
+    @Transactional
     public CropBatch harvest(UUID id, BigDecimal yieldKg, Instant endDate) {
         if (yieldKg == null || yieldKg.signum() <= 0) {
             throw new IllegalArgumentException("yieldKg debe ser un numero positivo");
