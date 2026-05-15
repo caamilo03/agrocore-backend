@@ -1,6 +1,7 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
 
 import co.edu.udea.agrocore.backend.application.exception.InvalidBatchStateException;
+import co.edu.udea.agrocore.backend.application.exception.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +22,11 @@ import java.util.NoSuchElementException;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
+    }
 
     @ExceptionHandler(InvalidBatchStateException.class)
     public ResponseEntity<Map<String, String>> handleInvalidBatchState(InvalidBatchStateException ex) {
