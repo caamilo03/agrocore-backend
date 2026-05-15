@@ -1,6 +1,7 @@
 package co.edu.udea.agrocore.backend.application.service;
 
 import co.edu.udea.agrocore.backend.domain.model.CropBatch;
+import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.model.Species;
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
 import co.edu.udea.agrocore.backend.domain.port.out.CropBatchRepositoryPort;
@@ -46,7 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TelemetrySimulatorService {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetrySimulatorService.class);
-    private static final String ACTIVE_STATUS = "ACTIVO";
+    private static final CropBatchStatus ACTIVE_STATUS = CropBatchStatus.ACTIVO;
     private static final int VALUE_SCALE = 2;
 
     private final CropBatchRepositoryPort cropBatchPort;

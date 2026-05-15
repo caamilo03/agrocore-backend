@@ -1,6 +1,9 @@
 package co.edu.udea.agrocore.backend.application.service;
 
+import co.edu.udea.agrocore.backend.domain.model.OptimalRanges;
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
+import co.edu.udea.agrocore.backend.domain.model.TelemetryStats;
+import co.edu.udea.agrocore.backend.domain.port.in.GetTelemetryStatsUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.QueryTelemetryUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.SaveTelemetryReadingUseCase;
 import co.edu.udea.agrocore.backend.domain.port.out.TelemetryRepositoryPort;
@@ -12,7 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class TelemetryService implements SaveTelemetryReadingUseCase, QueryTelemetryUseCase {
+public class TelemetryService implements SaveTelemetryReadingUseCase, QueryTelemetryUseCase, GetTelemetryStatsUseCase {
 
     private final TelemetryRepositoryPort repositoryPort;
 
@@ -43,5 +46,10 @@ public class TelemetryService implements SaveTelemetryReadingUseCase, QueryTelem
     @Override
     public List<TelemetryReading> getRepresentativeInRange(UUID idCropBatch, Instant from, Instant to, int maxBuckets) {
         return repositoryPort.findRepresentativeInRange(idCropBatch, from, to, maxBuckets);
+    }
+
+    @Override
+    public TelemetryStats getStats(UUID batchId, Instant from, Instant to, OptimalRanges ranges) {
+        return repositoryPort.computeStats(batchId, from, to, ranges);
     }
 }

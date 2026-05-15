@@ -1,6 +1,7 @@
 package co.edu.udea.agrocore.backend.application.service;
 
 import co.edu.udea.agrocore.backend.domain.model.CropBatch;
+import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
 import co.edu.udea.agrocore.backend.domain.model.Species;
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
 import co.edu.udea.agrocore.backend.domain.port.out.CropBatchRepositoryPort;
@@ -50,7 +51,7 @@ class TelemetrySimulatorServiceTest {
 
     @Test
     void tick_skipsPublishWhenNoActiveBatches() {
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of());
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of());
 
         service.tick();
 
@@ -59,7 +60,7 @@ class TelemetrySimulatorServiceTest {
 
     @Test
     void tick_publishesOneReadingPerActiveBatchWithCompleteSpecies() {
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of(activeBatch()));
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of(activeBatch()));
         when(speciesPort.findById(SPECIES_ID)).thenReturn(Optional.of(completeSpecies()));
 
         service.tick();
@@ -72,9 +73,9 @@ class TelemetrySimulatorServiceTest {
         CropBatch orphan = CropBatch.builder()
                 .id(BATCH_ID)
                 .idSpecies(null)
-                .status("ACTIVO")
+                .status(CropBatchStatus.ACTIVO)
                 .build();
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of(orphan));
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of(orphan));
 
         service.tick();
 
@@ -91,7 +92,7 @@ class TelemetrySimulatorServiceTest {
                 .maxTemperature(new BigDecimal("28.00"))
                 // sin humedad ni co2
                 .build();
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of(activeBatch()));
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of(activeBatch()));
         when(speciesPort.findById(SPECIES_ID)).thenReturn(Optional.of(incomplete));
 
         service.tick();
@@ -104,7 +105,7 @@ class TelemetrySimulatorServiceTest {
         Species species = completeSpecies();
 
         // 100 ticks deberian mantenerse dentro del rango (clamp activo).
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of(activeBatch()));
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of(activeBatch()));
         when(speciesPort.findById(SPECIES_ID)).thenReturn(Optional.of(species));
 
         ArgumentCaptor<TelemetryReading> captor = ArgumentCaptor.forClass(TelemetryReading.class);
@@ -129,7 +130,7 @@ class TelemetrySimulatorServiceTest {
     @Test
     void firstReadingStartsNearMidpointOfRanges() {
         Species species = completeSpecies();
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of(activeBatch()));
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of(activeBatch()));
         when(speciesPort.findById(SPECIES_ID)).thenReturn(Optional.of(species));
 
         ArgumentCaptor<TelemetryReading> captor = ArgumentCaptor.forClass(TelemetryReading.class);
@@ -152,7 +153,7 @@ class TelemetrySimulatorServiceTest {
 
     @Test
     void speciesIsCachedAcrossTicks() {
-        when(batchPort.findByStatus("ACTIVO")).thenReturn(List.of(activeBatch()));
+        when(batchPort.findByStatus(CropBatchStatus.ACTIVO)).thenReturn(List.of(activeBatch()));
         when(speciesPort.findById(SPECIES_ID)).thenReturn(Optional.of(completeSpecies()));
 
         service.tick();
@@ -167,7 +168,7 @@ class TelemetrySimulatorServiceTest {
         return CropBatch.builder()
                 .id(BATCH_ID)
                 .idSpecies(SPECIES_ID)
-                .status("ACTIVO")
+                .status(CropBatchStatus.ACTIVO)
                 .build();
     }
 
