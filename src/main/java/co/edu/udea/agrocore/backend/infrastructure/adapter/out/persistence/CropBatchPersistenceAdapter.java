@@ -56,6 +56,14 @@ public class CropBatchPersistenceAdapter implements CropBatchRepositoryPort {
         jpaRepository.deleteById(id);
     }
 
+    @Override
+    public List<CropBatch> findByUserId(UUID userId, CropBatchStatus statusFilter) {
+        List<CropBatchEntity> entities = statusFilter != null
+                ? jpaRepository.findByIdUserAndStatus(userId, statusFilter)
+                : jpaRepository.findByIdUser(userId);
+        return entities.stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
     private CropBatchEntity toEntity(CropBatch domain) {
         return CropBatchEntity.builder()
                 .id(domain.getId())

@@ -1,5 +1,6 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
 
+import co.edu.udea.agrocore.backend.application.exception.ForbiddenException;
 import co.edu.udea.agrocore.backend.application.exception.InvalidBatchStateException;
 import co.edu.udea.agrocore.backend.application.exception.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidBatchStateException.class)

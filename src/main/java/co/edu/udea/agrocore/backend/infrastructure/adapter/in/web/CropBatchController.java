@@ -6,6 +6,7 @@ import co.edu.udea.agrocore.backend.domain.port.in.*;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.in.web.dto.HarvestRequest;
 import co.edu.udea.agrocore.backend.infrastructure.adapter.in.web.dto.TraceabilityResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -41,17 +42,16 @@ public class CropBatchController {
         this.getTraceabilityUseCase = getTraceabilityUseCase;
     }
 
+    /** ADMIN y OPERADOR pueden crear lotes. OPERADOR solo crea lotes propios (el service lo fuerza). */
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','OPERADOR')")
     public ResponseEntity<CropBatch> create(@RequestBody CropBatch cropBatch) {
         return ResponseEntity.ok(createCropBatchUseCase.create(cropBatch));
     }
 
-    /**
-     * Lista lotes. Filtro opcional por estado (ACTIVO, COSECHADO, PERDIDO,
-     * case-insensitive). Si {@code status} no es valido, devuelve 400 via
-     * {@link GlobalExceptionHandler}.
-     */
+    /** Todos los autenticados pueden listar. El service filtra por usuario para OPERADOR. */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<CropBatch>> getAll(@RequestParam(required = false) String status) {
         CropBatchStatus filter = (status == null || status.isBlank())
                 ? null
@@ -59,59 +59,41 @@ public class CropBatchController {
         return ResponseEntity.ok(getAllCropBatchUseCase.getAll(filter));
     }
 
+    /** ADMIN y OPERADOR pueden modificar. El service verifica ownership para OPERADOR. */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERADOR')")
     public ResponseEntity<CropBatch> update(@PathVariable UUID id, @RequestBody CropBatch cropBatch) {
         return ResponseEntity.ok(updateCropBatchUseCase.update(id, cropBatch));
     }
 
+    /** ADMIN y OPERADOR pueden eliminar. El service verifica ownership para OPERADOR. */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERADOR')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         deleteCropBatchUseCase.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Marca un lote como cosechado.
-     *
-     * Respuestas:
-     * <ul>
-     *   <li>200 OK: lote actualizado.</li>
-     *   <li>400 Bad Request: yieldKg ausente/&lt;=0 o endDate con formato invalido.</li>
-     *   <li>404 Not Found: el lote no existe.</li>
-     *   <li>409 Conflict: el lote no esta en estado ACTIVO (ya COSECHADO o PERDIDO).</li>
-     * </ul>
-     */
+    /** ADMIN y OPERADOR pueden cosechar. El service verifica ownership para OPERADOR. */
     @PostMapping("/{id}/harvest")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERADOR')")
     public ResponseEntity<CropBatch> harvest(@PathVariable UUID id, @RequestBody HarvestRequest request) {
         Instant endDate = parseEndDate(request.endDate());
         return ResponseEntity.ok(harvestCropBatchUseCase.harvest(id, request.yieldKg(), endDate));
     }
 
-    /**
-     * Trazabilidad completa del lote: batch + species + substrate +
-     * suppliers + stats agregadas de telemetria del periodo de cultivo.
-     * 404 si el lote no existe; cualquier referencia eliminada se
-     * devuelve como null en el JSON.
-     */
+    /** Trazabilidad: todos los autenticados pueden ver. El service verifica acceso para OPERADOR. */
     @GetMapping("/{id}/traceability")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TraceabilityResponse> traceability(@PathVariable UUID id) {
         return ResponseEntity.ok(TraceabilityResponse.from(getTraceabilityUseCase.get(id)));
     }
 
-    /**
-     * Parsea el endDate opcional del body tolerando con y sin offset.
-     * Mismo contrato que {@code TelemetryController.parseInstant} para que
-     * el frontend pueda enviar timestamps uniformemente.
-     *
-     * @return el Instant parseado, o null si la entrada es null/blank.
-     * @throws IllegalArgumentException si el string no se puede parsear.
-     */
     static Instant parseEndDate(String value) {
         if (value == null || value.isBlank()) return null;
         try {
             return OffsetDateTime.parse(value).toInstant();
         } catch (DateTimeParseException ignored) {
-            // sin zona — fallback a UTC
         }
         try {
             return LocalDateTime.parse(value).toInstant(ZoneOffset.UTC);

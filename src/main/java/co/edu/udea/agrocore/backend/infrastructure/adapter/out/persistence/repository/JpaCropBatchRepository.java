@@ -11,4 +11,6 @@ import java.util.UUID;
 @Repository
 public interface JpaCropBatchRepository extends JpaRepository<CropBatchEntity, UUID> {
     List<CropBatchEntity> findByStatus(CropBatchStatus status);
+    List<CropBatchEntity> findByIdUser(UUID idUser);
+    List<CropBatchEntity> findByIdUserAndStatus(UUID idUser, CropBatchStatus status);
 }
