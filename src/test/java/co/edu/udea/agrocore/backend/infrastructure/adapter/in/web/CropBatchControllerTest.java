@@ -40,6 +40,7 @@ class CropBatchControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean private co.edu.udea.agrocore.backend.infrastructure.security.JwtService jwtService;
     @MockitoBean private CreateCropBatchUseCase createUseCase;
     @MockitoBean private GetAllCropBatchUseCase getAllUseCase;
     @MockitoBean private UpdateCropBatchUseCase updateUseCase;
