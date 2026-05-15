@@ -43,7 +43,10 @@ public class SecurityConfig {
             .httpBasic(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .cors(c -> c.configurationSource(corsConfigurationSource))
-            .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+            .authorizeHttpRequests(a -> a
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .anyRequest().authenticated())
             .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

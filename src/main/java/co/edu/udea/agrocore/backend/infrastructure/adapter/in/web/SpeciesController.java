@@ -6,6 +6,7 @@ import co.edu.udea.agrocore.backend.domain.port.in.DeleteSpeciesUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.GetAllSpeciesUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.UpdateSpeciesUseCase;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,7 +14,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/species")
-//@CrossOrigin(origins = "*")
 public class SpeciesController {
 
     private final CreateSpeciesUseCase createSpeciesUseCase;
@@ -32,21 +32,25 @@ public class SpeciesController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Species> create(@RequestBody Species species) {
         return ResponseEntity.ok(createSpeciesUseCase.create(species));
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Species>> getAll() {
         return ResponseEntity.ok(getAllSpeciesUseCase.getAll());
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Species> update(@PathVariable UUID id, @RequestBody Species species) {
         return ResponseEntity.ok(updateSpeciesUseCase.update(id, species));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         deleteSpeciesUseCase.delete(id);
         return ResponseEntity.noContent().build();

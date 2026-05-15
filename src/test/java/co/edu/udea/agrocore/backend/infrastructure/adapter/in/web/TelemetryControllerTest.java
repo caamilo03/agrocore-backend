@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(TelemetryController.class)
+@WithMockUser(roles = "ADMIN")
 class TelemetryControllerTest {
 
     private static final String BASE = "/api/v1/telemetry/batches";
@@ -36,6 +38,9 @@ class TelemetryControllerTest {
 
     @MockitoBean
     private QueryTelemetryUseCase queryTelemetryUseCase;
+
+    @MockitoBean
+    private co.edu.udea.agrocore.backend.domain.port.in.GetAllCropBatchUseCase getAllCropBatchUseCase;
 
     @Test
     void latest_returnsReadingWhenPresent() throws Exception {

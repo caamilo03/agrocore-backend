@@ -45,8 +45,12 @@ class CropBatchTraceabilityServiceTest {
         supplierPort = mock(SupplierRepositoryPort.class);
         telemetryPort = mock(TelemetryRepositoryPort.class);
         Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
+        co.edu.udea.agrocore.backend.infrastructure.security.AuthenticatedUser authUser =
+                mock(co.edu.udea.agrocore.backend.infrastructure.security.AuthenticatedUser.class);
+        // Default: ADMIN — sin restricciones de ownership
+        when(authUser.getRole()).thenReturn(Optional.of(Role.ADMIN));
         service = new CropBatchTraceabilityService(
-                cropBatchPort, speciesPort, substratePort, supplierPort, telemetryPort, fixedClock);
+                cropBatchPort, speciesPort, substratePort, supplierPort, telemetryPort, authUser, fixedClock);
     }
 
     @Test

@@ -4,6 +4,7 @@ import co.edu.udea.agrocore.backend.domain.model.Substrate;
 import co.edu.udea.agrocore.backend.domain.port.in.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,22 +31,26 @@ public class SubstrateController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Substrate> create(@RequestBody Substrate substrate) {
         Substrate created = createSubstrateUseCase.create(substrate);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Substrate>> getAll() {
         return ResponseEntity.ok(getAllSubstratesUseCase.getAll());
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Substrate> update(@PathVariable UUID id, @RequestBody Substrate substrate) {
         return ResponseEntity.ok(updateSubstrateUseCase.update(id, substrate));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         deleteSubstrateUseCase.delete(id);
         return ResponseEntity.noContent().build();

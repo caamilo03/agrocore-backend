@@ -3,7 +3,9 @@ package co.edu.udea.agrocore.backend.application.service;
 import co.edu.udea.agrocore.backend.application.exception.InvalidBatchStateException;
 import co.edu.udea.agrocore.backend.domain.model.CropBatch;
 import co.edu.udea.agrocore.backend.domain.model.CropBatchStatus;
+import co.edu.udea.agrocore.backend.domain.model.Role;
 import co.edu.udea.agrocore.backend.domain.port.out.CropBatchRepositoryPort;
+import co.edu.udea.agrocore.backend.infrastructure.security.AuthenticatedUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,13 +31,18 @@ class CropBatchServiceTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-05-13T15:00:00Z");
 
     private CropBatchRepositoryPort port;
+    private AuthenticatedUser authenticatedUser;
     private CropBatchService service;
 
     @BeforeEach
     void setUp() {
         port = mock(CropBatchRepositoryPort.class);
+        authenticatedUser = mock(AuthenticatedUser.class);
+        // Default: ADMIN — sin restricciones de ownership.
+        when(authenticatedUser.getRole()).thenReturn(Optional.of(Role.ADMIN));
+        when(authenticatedUser.getUserId()).thenReturn(Optional.of(UUID.randomUUID()));
         Clock fixedClock = Clock.fixed(FIXED_NOW, ZoneId.of("UTC"));
-        service = new CropBatchService(port, fixedClock);
+        service = new CropBatchService(port, fixedClock, authenticatedUser);
     }
 
     // ----- harvest -----

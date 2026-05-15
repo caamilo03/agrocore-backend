@@ -4,6 +4,7 @@ import co.edu.udea.agrocore.backend.domain.model.Supplier;
 import co.edu.udea.agrocore.backend.domain.port.in.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,22 +31,26 @@ public class SupplierController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Supplier> create(@RequestBody Supplier supplier) {
         Supplier created = createSupplierUseCase.create(supplier);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Supplier>> getAll() {
         return ResponseEntity.ok(getAllSuppliersUseCase.getAll());
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Supplier> update(@PathVariable UUID id, @RequestBody Supplier supplier) {
         return ResponseEntity.ok(updateSupplierUseCase.update(id, supplier));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         deleteSupplierUseCase.delete(id);
         return ResponseEntity.noContent().build();

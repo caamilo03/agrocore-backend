@@ -1,8 +1,10 @@
 package co.edu.udea.agrocore.backend.infrastructure.adapter.in.web;
 
 import co.edu.udea.agrocore.backend.domain.model.TelemetryReading;
+import co.edu.udea.agrocore.backend.domain.port.in.GetAllCropBatchUseCase;
 import co.edu.udea.agrocore.backend.domain.port.in.QueryTelemetryUseCase;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -40,14 +42,46 @@ public class TelemetryController {
     private static final int RANGE_MAX_BUCKETS = 5000;
 
     private final QueryTelemetryUseCase queryTelemetryUseCase;
+    private final GetAllCropBatchUseCase batchUseCase;
 
-    public TelemetryController(QueryTelemetryUseCase queryTelemetryUseCase) {
+    public TelemetryController(QueryTelemetryUseCase queryTelemetryUseCase,
+                               GetAllCropBatchUseCase batchUseCase) {
         this.queryTelemetryUseCase = queryTelemetryUseCase;
+        this.batchUseCase = batchUseCase;
+    }
+
+    /**
+     * Verifica que el usuario tenga acceso al lote. Para OPERADOR, delega al service
+     * que hace la verificacion de ownership (lanza 403 si no es dueño).
+     * ADMIN y OBSERVADOR siempre pueden acceder.
+     */
+    /**
+     * Para OPERADOR: verifica que el batchId esté en sus lotes accesibles.
+     * Para ADMIN y OBSERVADOR: siempre permitido (ven todos los lotes).
+     * La lógica de filtrado vive en CropBatchService que aplica el contexto de usuario.
+     */
+    private void assertBatchAccess(UUID batchId) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null) return; // permitAll ya maneja 401 en filterChain
+
+        boolean isOperador = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_OPERADOR"));
+        if (!isOperador) return; // ADMIN y OBSERVADOR pueden ver cualquier batch
+
+        // OPERADOR: verificar que el batch esté en su lista (getAll ya filtra por userId)
+        batchUseCase.getAll(null).stream()
+                .filter(b -> batchId.equals(b.getId()))
+                .findFirst()
+                .orElseThrow(() -> new co.edu.udea.agrocore.backend.application.exception
+                        .ForbiddenException("No tienes permiso para acceder a la telemetría de este lote"));
     }
 
     /** Ultima lectura del lote. 404 si aun no hay lecturas registradas. */
     @GetMapping("/latest")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TelemetryReading> latest(@PathVariable UUID batchId) {
+        assertBatchAccess(batchId);
         return queryTelemetryUseCase.getLatest(batchId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -55,9 +89,11 @@ public class TelemetryController {
 
     /** Ultimas N lecturas (DESC). limit default 100, max 1000. */
     @GetMapping("/recent")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<TelemetryReading>> recent(
             @PathVariable UUID batchId,
             @RequestParam(defaultValue = "" + RECENT_DEFAULT_LIMIT) int limit) {
+        assertBatchAccess(batchId);
         int effectiveLimit = clamp(limit, 1, RECENT_MAX_LIMIT);
         return ResponseEntity.ok(queryTelemetryUseCase.getRecent(batchId, effectiveLimit));
     }
@@ -71,10 +107,12 @@ public class TelemetryController {
      * como sin zona (2026-05-03T12:00:00); en este ultimo caso se asume UTC.
      */
     @GetMapping("/range")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<TelemetryReading>> range(
             @PathVariable UUID batchId,
             @RequestParam String from,
             @RequestParam String to) {
+        assertBatchAccess(batchId);
         Instant fromInstant = parseInstant(from);
         Instant toInstant = parseInstant(to);
         if (fromInstant == null || toInstant == null) {

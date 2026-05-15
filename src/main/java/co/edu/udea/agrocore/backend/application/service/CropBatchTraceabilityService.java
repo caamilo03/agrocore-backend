@@ -1,8 +1,10 @@
 package co.edu.udea.agrocore.backend.application.service;
 
+import co.edu.udea.agrocore.backend.application.exception.ForbiddenException;
 import co.edu.udea.agrocore.backend.domain.model.*;
 import co.edu.udea.agrocore.backend.domain.port.in.GetCropBatchTraceabilityUseCase;
 import co.edu.udea.agrocore.backend.domain.port.out.*;
+import co.edu.udea.agrocore.backend.infrastructure.security.AuthenticatedUser;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -26,6 +28,7 @@ public class CropBatchTraceabilityService implements GetCropBatchTraceabilityUse
     private final SubstrateRepositoryPort substratePort;
     private final SupplierRepositoryPort supplierPort;
     private final TelemetryRepositoryPort telemetryPort;
+    private final AuthenticatedUser authenticatedUser;
     private final Clock clock;
 
     public CropBatchTraceabilityService(CropBatchRepositoryPort cropBatchPort,
@@ -33,12 +36,14 @@ public class CropBatchTraceabilityService implements GetCropBatchTraceabilityUse
                                         SubstrateRepositoryPort substratePort,
                                         SupplierRepositoryPort supplierPort,
                                         TelemetryRepositoryPort telemetryPort,
+                                        AuthenticatedUser authenticatedUser,
                                         Clock clock) {
         this.cropBatchPort = cropBatchPort;
         this.speciesPort = speciesPort;
         this.substratePort = substratePort;
         this.supplierPort = supplierPort;
         this.telemetryPort = telemetryPort;
+        this.authenticatedUser = authenticatedUser;
         this.clock = clock;
     }
 
@@ -46,6 +51,17 @@ public class CropBatchTraceabilityService implements GetCropBatchTraceabilityUse
     public TraceabilityView get(UUID batchId) {
         CropBatch batch = cropBatchPort.findById(batchId)
                 .orElseThrow(() -> new NoSuchElementException("Lote no encontrado"));
+
+        // OPERADOR solo puede ver trazabilidad de sus propios lotes.
+        authenticatedUser.getRole().ifPresent(role -> {
+            if (role == Role.OPERADOR) {
+                authenticatedUser.getUserId().ifPresent(userId -> {
+                    if (!userId.equals(batch.getIdUser())) {
+                        throw new ForbiddenException("No tienes permiso para ver la trazabilidad de este lote");
+                    }
+                });
+            }
+        });
 
         Species species = findOrNull(batch.getIdSpecies(), speciesPort::findById);
         Substrate substrate = findOrNull(batch.getIdSubstrate(), substratePort::findById);
