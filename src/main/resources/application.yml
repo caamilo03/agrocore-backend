@@ -48,3 +48,12 @@ agrocore:
     enabled: ${AGROCORE_SIMULATOR_ENABLED:true}
     interval-ms: ${AGROCORE_SIMULATOR_INTERVAL_MS:30000}
     variance-percent: 5
+  security:
+    jwt:
+      # Minimo 32 caracteres. En produccion usar AGROCORE_JWT_SECRET con valor aleatorio seguro.
+      secret: ${AGROCORE_JWT_SECRET:dev-secret-only-not-for-production-min-256-bits-agrocore-2026}
+      expiry-ms: ${AGROCORE_JWT_EXPIRY_MS:86400000}   # 24h por defecto
+    # Emails que reciben rol ADMIN al hacer su primer login. Separados por coma.
+    admin-emails: ${AGROCORE_ADMIN_EMAILS:}
+    google:
+      client-id: ${AGROCORE_GOOGLE_CLIENT_ID:}

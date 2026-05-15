@@ -32,6 +32,9 @@ class TelemetryControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private co.edu.udea.agrocore.backend.infrastructure.security.JwtService jwtService;
+
+    @MockitoBean
     private QueryTelemetryUseCase queryTelemetryUseCase;
 
     @Test
